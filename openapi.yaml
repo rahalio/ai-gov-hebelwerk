@@ -1,0 +1,2325 @@
+openapi: 3.0.3
+info:
+  title: Hebelwerk
+  version: 0.1.0
+  description: >-
+    Delivery ledger for a national AI strategy owned jointly by several ministries.
+    Measures carry a named lead ministry, a commitment strength and a delivery
+    instrument; money carries a provenance class and a per-year authorisation state;
+    the doubling promise resolves into leverage statements computed only from confirmed
+    co-financing. Counting definitions are versioned, spillover assessments carry
+    response clocks, and portfolio reorganisation re-owns measures without erasing the
+    prior assignment.
+  x-product-slug: ai-gov-hebelwerk
+  x-source: ai-in-gov/Nationale_KI-Strategie_engl/
+servers:
+  - url: https://api.example.com
+tags:
+  - name: Register
+    description: Strategy editions, fields of action, and measures
+  - name: Ownership
+    description: Lead ministry assignment and commitment classification
+  - name: Money
+    description: Funding lines, provenance classes, and appropriation years
+  - name: Leverage
+    description: Co-financing pledges, realisation, and leverage statements
+  - name: Targets
+    description: Countable targets and versioned counting definitions
+  - name: Delivery
+    description: Milestones and declared slippage
+  - name: Coordination
+    description: Cross-portfolio spillover assessments and response duties
+  - name: Continuity
+    description: Portfolio reorganisation, re-ownership, and basis lapse
+  - name: Scrutiny
+    description: Parliamentary, audit, and transparency requests and answers
+  - name: Reporting
+    description: Coordination report and public delivery extract
+paths:
+  /v1/strategy-editions:
+    get:
+      operationId: listStrategyEditions
+      tags: [Register]
+      summary: List strategy editions under management
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Strategy editions page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeStrategyEdition"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createStrategyEdition
+      tags: [Register]
+      summary: Register a strategy edition with its co-authoring ministries
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrategyEditionCreate"
+      responses:
+        "201":
+          description: Strategy edition registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeStrategyEdition"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/fields-of-action:
+    get:
+      operationId: listFieldsOfAction
+      tags: [Register]
+      summary: List fields of action for an edition
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: strategyEditionId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Fields of action page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeFieldOfAction"
+    post:
+      operationId: createFieldOfAction
+      tags: [Register]
+      summary: Register a field of action
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieldOfActionCreate"
+      responses:
+        "201":
+          description: Field of action registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeFieldOfAction"
+  /v1/measures:
+    get:
+      operationId: listMeasures
+      tags: [Register]
+      summary: List measures with ownership and commitment classification
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: fieldOfActionId
+          in: query
+          schema:
+            type: string
+        - name: leadMinistryId
+          in: query
+          schema:
+            type: string
+        - name: commitmentStrength
+          in: query
+          schema:
+            $ref: "#/components/schemas/CommitmentStrength"
+        - name: deliveryInstrument
+          in: query
+          schema:
+            $ref: "#/components/schemas/DeliveryInstrument"
+        - name: unowned
+          in: query
+          description: Return only measures with no current lead assignment
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Measures page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeMeasure"
+    post:
+      operationId: registerMeasure
+      tags: [Register]
+      summary: Register a measure taken from the strategy text
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeasureCreate"
+      responses:
+        "201":
+          description: Measure registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMeasure"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/measures/{measureId}:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    get:
+      operationId: getMeasure
+      tags: [Register]
+      summary: Retrieve a measure with its current classification
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Measure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMeasure"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/measures/{measureId}/lead-assignment:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    put:
+      operationId: assignMeasureLead
+      tags: [Ownership]
+      summary: Assign or replace the accountable lead ministry and unit
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadAssignmentCreate"
+      responses:
+        "200":
+          description: Lead assigned, prior assignment retained in history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeLeadAssignment"
+  /v1/measures/{measureId}/classification:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    post:
+      operationId: classifyMeasureCommitment
+      tags: [Ownership]
+      summary: Set commitment strength, delivery instrument, and subsidiarity level
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commitmentStrength, deliveryInstrument, subsidiarity]
+              properties:
+                commitmentStrength:
+                  $ref: "#/components/schemas/CommitmentStrength"
+                deliveryInstrument:
+                  $ref: "#/components/schemas/DeliveryInstrument"
+                subsidiarity:
+                  $ref: "#/components/schemas/SubsidiarityDetermination"
+                rationale:
+                  type: string
+      responses:
+        "200":
+          description: Classification recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMeasure"
+  /v1/measures/{measureId}/funding-lines:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    get:
+      operationId: listFundingLines
+      tags: [Money]
+      summary: List funding lines attributed to a measure
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - name: provenance
+          in: query
+          schema:
+            $ref: "#/components/schemas/FundingProvenance"
+      responses:
+        "200":
+          description: Funding lines page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeFundingLine"
+    post:
+      operationId: attachFundingLine
+      tags: [Money]
+      summary: Attribute money to a measure with a provenance class
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FundingLineCreate"
+      responses:
+        "201":
+          description: Funding line attributed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeFundingLine"
+        "422":
+          description: Rejected because provenance or budget reconciliation is missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/funding-lines/{fundingLineId}/appropriation-years/{year}:
+    parameters:
+      - $ref: "#/components/parameters/FundingLineId"
+      - name: year
+        in: path
+        required: true
+        schema:
+          type: integer
+    put:
+      operationId: setAppropriationYearState
+      tags: [Money]
+      summary: Mark a year as planned or authorised against the enacted budget
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppropriationYear"
+      responses:
+        "200":
+          description: Appropriation year state recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAppropriationYear"
+  /v1/money/attribution-summary:
+    get:
+      operationId: getMoneyAttributionSummary
+      tags: [Money]
+      summary: Attributed money split by provenance class, never as a single total
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: strategyEditionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Provenance split
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMoneyAttributionSummary"
+  /v1/measures/{measureId}/cofinancing-pledges:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    post:
+      operationId: recordCoFinancingPledge
+      tags: [Leverage]
+      summary: Record a pledge from a Land, research organisation, or industry partner
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoFinancingPledgeCreate"
+      responses:
+        "201":
+          description: Pledge recorded as unconfirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCoFinancingPledge"
+  /v1/cofinancing-pledges/{pledgeId}/realisation:
+    parameters:
+      - name: pledgeId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: recordPledgeRealisation
+      tags: [Leverage]
+      summary: Record contracting or realisation evidence for a pledge
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PledgeRealisationCreate"
+      responses:
+        "201":
+          description: Realisation recorded and confirmed total recalculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePledgeRealisation"
+  /v1/leverage-statements:
+    get:
+      operationId: listLeverageStatements
+      tags: [Leverage]
+      summary: List issued leverage statements
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Leverage statements page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeLeverageStatement"
+    post:
+      operationId: issueLeverageStatement
+      tags: [Leverage]
+      summary: Issue the leverage figure used when the doubling claim is quoted
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeverageStatementCreate"
+      responses:
+        "201":
+          description: Statement issued on confirmed contributions only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeLeverageStatement"
+        "409":
+          description: Refused because the claim counts unconfirmed pledges
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /v1/targets:
+    get:
+      operationId: listTargetCounters
+      tags: [Targets]
+      summary: List countable targets and their definition version in force
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: measureId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Targets page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeTargetCounter"
+    post:
+      operationId: createTargetCounter
+      tags: [Targets]
+      summary: Create a countable target with its first counting definition
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TargetCounterCreate"
+      responses:
+        "201":
+          description: Target created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeTargetCounter"
+  /v1/targets/{targetId}/counting-definitions:
+    parameters:
+      - $ref: "#/components/parameters/TargetId"
+    post:
+      operationId: amendCountingDefinition
+      tags: [Targets]
+      summary: Amend what counts, creating a dated version with a stated reason
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CountingDefinitionCreate"
+      responses:
+        "201":
+          description: Definition version created, predecessor retained
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCountingDefinition"
+  /v1/targets/{targetId}/progress-observations:
+    parameters:
+      - $ref: "#/components/parameters/TargetId"
+    post:
+      operationId: recordProgressObservation
+      tags: [Targets]
+      summary: Record progress stamped with the definition version in force
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressObservationCreate"
+      responses:
+        "201":
+          description: Observation recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeProgressObservation"
+  /v1/measures/{measureId}/milestones:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    post:
+      operationId: createDeliveryMilestone
+      tags: [Delivery]
+      summary: Create a milestone typed by the instrument that delivers it
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryMilestoneCreate"
+      responses:
+        "201":
+          description: Milestone created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeDeliveryMilestone"
+  /v1/milestones/{milestoneId}/slippage:
+    parameters:
+      - name: milestoneId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: declareSlippage
+      tags: [Delivery]
+      summary: Declare slippage with a cause and what is being revised
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlippageDeclarationCreate"
+      responses:
+        "201":
+          description: Slippage declared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeSlippageDeclaration"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/spillover-assessments:
+    get:
+      operationId: listSpilloverAssessments
+      tags: [Coordination]
+      summary: List spillover assessments and their response state
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: affectedMinistryId
+          in: query
+          schema:
+            type: string
+        - name: overdueOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Spillover assessments page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeSpilloverAssessment"
+    post:
+      operationId: fileSpilloverAssessment
+      tags: [Coordination]
+      summary: File a cross-portfolio impact assessment for a measure
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpilloverAssessmentCreate"
+      responses:
+        "201":
+          description: Assessment filed with a response deadline per named ministry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeSpilloverAssessment"
+  /v1/spillover-assessments/{assessmentId}/responses:
+    parameters:
+      - name: assessmentId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: respondToSpilloverAssessment
+      tags: [Coordination]
+      summary: Acknowledge, accept, or dispute an assessment as a named ministry
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoordinationResponseCreate"
+      responses:
+        "201":
+          description: Response recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCoordinationResponse"
+  /v1/portfolio-reorganisations:
+    post:
+      operationId: recordPortfolioReorganisation
+      tags: [Continuity]
+      summary: Record a machinery-of-government change and open a transition window
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortfolioReorganisationCreate"
+      responses:
+        "201":
+          description: Reorganisation recorded with affected measures listed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePortfolioReorganisation"
+  /v1/measures/{measureId}/basis-lapse:
+    parameters:
+      - $ref: "#/components/parameters/MeasureId"
+    post:
+      operationId: markMeasureBasisLapsed
+      tags: [Continuity]
+      summary: Mark a measure whose political or legal basis has expired
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lapsedBasis, effectiveFrom]
+              properties:
+                lapsedBasis:
+                  type: string
+                  enum:
+                    - coalition_provision_ended
+                    - framework_agreement_expired
+                    - programme_closed
+                    - reorganisation_without_successor
+                    - superseded_by_new_edition
+                narrative:
+                  type: string
+                effectiveFrom:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Measure marked basis-lapsed with attributed money retained
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeMeasure"
+  /v1/scrutiny-requests:
+    get:
+      operationId: listScrutinyRequests
+      tags: [Scrutiny]
+      summary: List parliamentary, audit, and transparency requests
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: requestType
+          in: query
+          schema:
+            $ref: "#/components/schemas/ScrutinyRequestType"
+      responses:
+        "200":
+          description: Scrutiny requests page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListEnvelopeScrutinyRequest"
+    post:
+      operationId: recordScrutinyRequest
+      tags: [Scrutiny]
+      summary: Record an incoming scrutiny request with its deadline
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrutinyRequestCreate"
+      responses:
+        "201":
+          description: Request recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeScrutinyRequest"
+  /v1/scrutiny-requests/{scrutinyRequestId}/answer:
+    parameters:
+      - name: scrutinyRequestId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      operationId: answerScrutinyRequest
+      tags: [Scrutiny]
+      summary: Answer from the ledger with the records relied upon
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerRecordCreate"
+      responses:
+        "201":
+          description: Answer recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeAnswerRecord"
+  /v1/publication-releases:
+    post:
+      operationId: issuePublicationRelease
+      tags: [Reporting]
+      summary: Issue the public delivery extract for a period
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicationReleaseCreate"
+      responses:
+        "201":
+          description: Release issued from records whose publication state permits it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopePublicationRelease"
+  /v1/reports/coordination:
+    get:
+      operationId: getCoordinationReport
+      tags: [Reporting]
+      summary: Inter-ministerial coordination and delivery report
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: strategyEditionId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            example: 2026-H1
+      responses:
+        "200":
+          description: Coordination report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataEnvelopeCoordinationReport"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    MeasureId:
+      name: measureId
+      in: path
+      required: true
+      schema:
+        type: string
+    FundingLineId:
+      name: fundingLineId
+      in: path
+      required: true
+      schema:
+        type: string
+    TargetId:
+      name: targetId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnprocessableEntity:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    ResponseMeta:
+      type: object
+      required: [requestId, timestamp]
+      properties:
+        requestId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: EUR
+    PublicationState:
+      type: object
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [internal_only, publishable, published]
+        withholdingReason:
+          type: string
+          enum:
+            - not_withheld
+            - pre_decisional
+            - negotiating_position_with_laender
+            - third_party_commercial
+            - security_sensitive
+            - personal_data
+        publishedAt:
+          type: string
+          format: date-time
+    CommitmentStrength:
+      type: string
+      description: How binding the strategy language actually is
+      enum:
+        - firm
+        - conditional
+        - advocacy
+    DeliveryInstrument:
+      type: string
+      description: What actually delivers the measure
+      enum:
+        - federal_expenditure
+        - agreement_with_laender
+        - negotiation_with_third_party_shareholders
+        - private_standardisation_body
+        - social_partner_dialogue
+        - eu_programme_funding
+        - legislative_change
+        - administrative_practice
+    SubsidiarityDetermination:
+      type: string
+      enum: [federal, laender, european, shared]
+    FundingProvenance:
+      type: string
+      description: Where the attributed money actually comes from
+      enum:
+        - newly_appropriated
+        - already_in_financial_plan
+        - reallocated_within_individual_budget
+        - notional_share_of_rd_uplift
+        - third_party_cofinancing
+    Ministry:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+        isCoAuthoringMinistry:
+          type: boolean
+        individualBudgetPlanReference:
+          type: string
+        successorMinistryId:
+          type: string
+    StrategyEdition:
+      type: object
+      required: [id, title, periodStartYear, periodEndYear]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        periodStartYear:
+          type: integer
+        periodEndYear:
+          type: integer
+        coAuthoringMinistryIds:
+          type: array
+          items:
+            type: string
+        headlineFederalEnvelope:
+          $ref: "#/components/schemas/Money"
+        leverageClaimMultiple:
+          type: number
+          format: float
+          description: The claimed multiple of federal money once third parties contribute
+        politicalBasisReference:
+          type: string
+          description: Coalition or programme provision on which vertical support depends
+        consultationReference:
+          type: string
+        coordinatedStrategies:
+          type: array
+          items:
+            type: string
+        externalScrutinyBodies:
+          type: array
+          items:
+            type: string
+        publishedAt:
+          type: string
+          format: date-time
+    StrategyEditionCreate:
+      type: object
+      required: [title, periodStartYear, periodEndYear, coAuthoringMinistryIds]
+      properties:
+        title:
+          type: string
+        periodStartYear:
+          type: integer
+        periodEndYear:
+          type: integer
+        coAuthoringMinistryIds:
+          type: array
+          items:
+            type: string
+        headlineFederalEnvelope:
+          $ref: "#/components/schemas/Money"
+        leverageClaimMultiple:
+          type: number
+          format: float
+        politicalBasisReference:
+          type: string
+        consultationReference:
+          type: string
+        coordinatedStrategies:
+          type: array
+          items:
+            type: string
+        externalScrutinyBodies:
+          type: array
+          items:
+            type: string
+    FieldOfAction:
+      type: object
+      required: [id, strategyEditionId, number, title]
+      properties:
+        id:
+          type: string
+        strategyEditionId:
+          type: string
+        number:
+          type: string
+          example: "3.1"
+        title:
+          type: string
+        goalAlignment:
+          type: array
+          items:
+            type: string
+            enum: [leading_centre, responsible_use, societal_integration]
+        coordinatingMinistryId:
+          type: string
+    FieldOfActionCreate:
+      type: object
+      required: [strategyEditionId, number, title]
+      properties:
+        strategyEditionId:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        goalAlignment:
+          type: array
+          items:
+            type: string
+            enum: [leading_centre, responsible_use, societal_integration]
+        coordinatingMinistryId:
+          type: string
+    LeadAssignment:
+      type: object
+      required: [measureId, ministryId, assignedAt]
+      properties:
+        measureId:
+          type: string
+        ministryId:
+          type: string
+        responsibleUnit:
+          type: string
+        responsibleOfficialName:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        supersededByReorganisationId:
+          type: string
+    LeadAssignmentCreate:
+      type: object
+      required: [ministryId, responsibleUnit]
+      properties:
+        ministryId:
+          type: string
+        responsibleUnit:
+          type: string
+        responsibleOfficialName:
+          type: string
+        reason:
+          type: string
+    Measure:
+      type: object
+      required: [id, fieldOfActionId, title, status]
+      properties:
+        id:
+          type: string
+        fieldOfActionId:
+          type: string
+        title:
+          type: string
+        sourceQuotation:
+          type: string
+          description: The commitment sentence as written in the strategy
+        currentLeadAssignment:
+          $ref: "#/components/schemas/LeadAssignment"
+        commitmentStrength:
+          $ref: "#/components/schemas/CommitmentStrength"
+        deliveryInstrument:
+          $ref: "#/components/schemas/DeliveryInstrument"
+        subsidiarity:
+          $ref: "#/components/schemas/SubsidiarityDetermination"
+        dependsOnThirdParties:
+          type: array
+          items:
+            type: string
+        linkedExternalProgramme:
+          type: string
+          description: Named EU or national programme carrying the same activity
+        status:
+          type: string
+          enum:
+            - registered
+            - unowned
+            - in_delivery
+            - slipped
+            - delivered
+            - basis_lapsed
+            - withdrawn
+        basisLapseReason:
+          type: string
+        publication:
+          $ref: "#/components/schemas/PublicationState"
+        registeredAt:
+          type: string
+          format: date-time
+    MeasureCreate:
+      type: object
+      required: [fieldOfActionId, title]
+      properties:
+        fieldOfActionId:
+          type: string
+        title:
+          type: string
+        sourceQuotation:
+          type: string
+        commitmentStrength:
+          $ref: "#/components/schemas/CommitmentStrength"
+        deliveryInstrument:
+          $ref: "#/components/schemas/DeliveryInstrument"
+        subsidiarity:
+          $ref: "#/components/schemas/SubsidiarityDetermination"
+        dependsOnThirdParties:
+          type: array
+          items:
+            type: string
+        linkedExternalProgramme:
+          type: string
+        publication:
+          $ref: "#/components/schemas/PublicationState"
+    AppropriationYear:
+      type: object
+      required: [year, amount, state]
+      properties:
+        year:
+          type: integer
+        amount:
+          $ref: "#/components/schemas/Money"
+        state:
+          type: string
+          enum: [planned, authorised, committed, disbursed, lapsed]
+        enactedBudgetReference:
+          type: string
+        commitmentAppropriation:
+          type: boolean
+    FundingLine:
+      type: object
+      required: [id, measureId, provenance, ministryId]
+      properties:
+        id:
+          type: string
+        measureId:
+          type: string
+        ministryId:
+          type: string
+        budgetPositionReference:
+          type: string
+        provenance:
+          $ref: "#/components/schemas/FundingProvenance"
+        reallocationSourceReference:
+          type: string
+          description: Where money was shifted from within the individual budget plan
+        totalAttributed:
+          $ref: "#/components/schemas/Money"
+        appropriationYears:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppropriationYear"
+        reconciledToBudget:
+          type: boolean
+        reconciliationDiscrepancyNote:
+          type: string
+    FundingLineCreate:
+      type: object
+      required: [ministryId, provenance, totalAttributed]
+      properties:
+        ministryId:
+          type: string
+        budgetPositionReference:
+          type: string
+        provenance:
+          $ref: "#/components/schemas/FundingProvenance"
+        reallocationSourceReference:
+          type: string
+        totalAttributed:
+          $ref: "#/components/schemas/Money"
+        appropriationYears:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppropriationYear"
+    MoneyAttributionSummary:
+      type: object
+      properties:
+        strategyEditionId:
+          type: string
+        byProvenance:
+          type: array
+          items:
+            type: object
+            properties:
+              provenance:
+                $ref: "#/components/schemas/FundingProvenance"
+              amount:
+                $ref: "#/components/schemas/Money"
+              lineCount:
+                type: integer
+        authorisedToDate:
+          $ref: "#/components/schemas/Money"
+        plannedNotYetAuthorised:
+          $ref: "#/components/schemas/Money"
+        newMoneyShare:
+          type: number
+          format: float
+        unreconciledLineCount:
+          type: integer
+        singleTotalSuppressed:
+          type: boolean
+          description: Always true, a combined total is never reported without the split
+    CoFinancingPledge:
+      type: object
+      required: [id, measureId, contributorType, contributorName, pledgedAmount, status]
+      properties:
+        id:
+          type: string
+        measureId:
+          type: string
+        contributorType:
+          type: string
+          enum: [land, research_organisation, industry, foundation, european_programme, municipality]
+        contributorName:
+          type: string
+        pledgedAmount:
+          $ref: "#/components/schemas/Money"
+        inKindDescription:
+          type: string
+        pledgeInstrument:
+          type: string
+          enum:
+            - announcement
+            - communique
+            - letter_of_intent
+            - administrative_agreement
+            - signed_contract
+        status:
+          type: string
+          enum: [unconfirmed, contracted, realised, partially_realised, lapsed, withdrawn]
+        pledgedAt:
+          type: string
+          format: date-time
+    CoFinancingPledgeCreate:
+      type: object
+      required: [contributorType, contributorName, pledgedAmount, pledgeInstrument]
+      properties:
+        contributorType:
+          type: string
+          enum: [land, research_organisation, industry, foundation, european_programme, municipality]
+        contributorName:
+          type: string
+        pledgedAmount:
+          $ref: "#/components/schemas/Money"
+        inKindDescription:
+          type: string
+        pledgeInstrument:
+          type: string
+          enum:
+            - announcement
+            - communique
+            - letter_of_intent
+            - administrative_agreement
+            - signed_contract
+    PledgeRealisation:
+      type: object
+      required: [id, pledgeId, confirmedAmount, evidenceType, recordedAt]
+      properties:
+        id:
+          type: string
+        pledgeId:
+          type: string
+        confirmedAmount:
+          $ref: "#/components/schemas/Money"
+        evidenceType:
+          type: string
+          enum:
+            - signed_agreement
+            - grant_award
+            - audited_statement
+            - invoice_settled
+            - in_kind_certified
+        evidenceReference:
+          type: string
+        recordedBy:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+    PledgeRealisationCreate:
+      type: object
+      required: [confirmedAmount, evidenceType]
+      properties:
+        confirmedAmount:
+          $ref: "#/components/schemas/Money"
+        evidenceType:
+          type: string
+          enum:
+            - signed_agreement
+            - grant_award
+            - audited_statement
+            - invoice_settled
+            - in_kind_certified
+        evidenceReference:
+          type: string
+    LeverageStatement:
+      type: object
+      required: [id, strategyEditionId, period, federalBase, confirmedThirdPartyTotal, confirmedLeverageRatio, issuedAt]
+      properties:
+        id:
+          type: string
+        strategyEditionId:
+          type: string
+        period:
+          type: string
+        federalBase:
+          $ref: "#/components/schemas/Money"
+        confirmedThirdPartyTotal:
+          $ref: "#/components/schemas/Money"
+        unconfirmedPledgeTotal:
+          $ref: "#/components/schemas/Money"
+        confirmedLeverageRatio:
+          type: number
+          format: float
+        claimedMultiple:
+          type: number
+          format: float
+        shortfallAgainstClaim:
+          $ref: "#/components/schemas/Money"
+        approvedBy:
+          type: string
+        intendedUse:
+          type: string
+          enum: [internal_report, ministerial_communication, parliamentary_answer, public_extract]
+        issuedAt:
+          type: string
+          format: date-time
+    LeverageStatementCreate:
+      type: object
+      required: [strategyEditionId, period, intendedUse, approvedBy]
+      properties:
+        strategyEditionId:
+          type: string
+        period:
+          type: string
+        intendedUse:
+          type: string
+          enum: [internal_report, ministerial_communication, parliamentary_answer, public_extract]
+        approvedBy:
+          type: string
+        includeUnconfirmedPledges:
+          type: boolean
+          description: Rejected when true, unconfirmed pledges may not enter the ratio
+    CountingDefinition:
+      type: object
+      required: [version, targetId, countsAs, effectiveFrom]
+      properties:
+        version:
+          type: integer
+        targetId:
+          type: string
+        countsAs:
+          type: string
+          description: Precisely what a single unit of progress is
+        exclusions:
+          type: array
+          items:
+            type: string
+        evidenceRequired:
+          type: string
+        amendmentReason:
+          type: string
+        effectOnReportedProgress:
+          type: string
+          enum: [none, increases, decreases, unknown]
+        amendedBy:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date
+    CountingDefinitionCreate:
+      type: object
+      required: [countsAs, amendmentReason, effectiveFrom]
+      properties:
+        countsAs:
+          type: string
+        exclusions:
+          type: array
+          items:
+            type: string
+        evidenceRequired:
+          type: string
+        amendmentReason:
+          type: string
+        effectOnReportedProgress:
+          type: string
+          enum: [none, increases, decreases, unknown]
+        effectiveFrom:
+          type: string
+          format: date
+    TargetCounter:
+      type: object
+      required: [id, measureId, label, targetValue, unit]
+      properties:
+        id:
+          type: string
+        measureId:
+          type: string
+        label:
+          type: string
+          example: additional AI professorships created
+        targetValue:
+          type: number
+          format: double
+        unit:
+          type: string
+          enum: [count, count_per_year, percent, currency]
+        floorOrCeiling:
+          type: string
+          enum: [at_least, at_most, exactly]
+        targetDate:
+          type: string
+          format: date
+        currentDefinitionVersion:
+          type: integer
+        latestObservedValue:
+          type: number
+          format: double
+    TargetCounterCreate:
+      type: object
+      required: [measureId, label, targetValue, unit, countingDefinition]
+      properties:
+        measureId:
+          type: string
+        label:
+          type: string
+        targetValue:
+          type: number
+          format: double
+        unit:
+          type: string
+          enum: [count, count_per_year, percent, currency]
+        floorOrCeiling:
+          type: string
+          enum: [at_least, at_most, exactly]
+        targetDate:
+          type: string
+          format: date
+        countingDefinition:
+          $ref: "#/components/schemas/CountingDefinitionCreate"
+    ProgressObservation:
+      type: object
+      required: [id, targetId, value, definitionVersion, observedAt]
+      properties:
+        id:
+          type: string
+        targetId:
+          type: string
+        value:
+          type: number
+          format: double
+        definitionVersion:
+          type: integer
+        evidenceSource:
+          type: string
+        reportedByMinistryId:
+          type: string
+        comparableToPriorObservation:
+          type: boolean
+        observedAt:
+          type: string
+          format: date-time
+    ProgressObservationCreate:
+      type: object
+      required: [value, evidenceSource]
+      properties:
+        value:
+          type: number
+          format: double
+        evidenceSource:
+          type: string
+        reportedByMinistryId:
+          type: string
+        observedAt:
+          type: string
+          format: date-time
+    DeliveryMilestone:
+      type: object
+      required: [id, measureId, title, dueDate, status]
+      properties:
+        id:
+          type: string
+        measureId:
+          type: string
+        title:
+          type: string
+        instrumentStep:
+          type: string
+          enum:
+            - funding_guideline_published
+            - call_launched
+            - award_made
+            - negotiation_opened
+            - agreement_signed
+            - legislation_tabled
+            - body_convened
+            - report_delivered
+        dueDate:
+          type: string
+          format: date
+        completedDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [planned, in_progress, met, slipped, cancelled]
+    DeliveryMilestoneCreate:
+      type: object
+      required: [title, dueDate]
+      properties:
+        title:
+          type: string
+        instrumentStep:
+          type: string
+          enum:
+            - funding_guideline_published
+            - call_launched
+            - award_made
+            - negotiation_opened
+            - agreement_signed
+            - legislation_tabled
+            - body_convened
+            - report_delivered
+        dueDate:
+          type: string
+          format: date
+    SlippageDeclaration:
+      type: object
+      required: [id, milestoneId, cause, revising, declaredAt]
+      properties:
+        id:
+          type: string
+        milestoneId:
+          type: string
+        cause:
+          type: string
+          enum:
+            - appropriation_timing
+            - agreement_with_third_party_not_reached
+            - capacity_shortfall
+            - dependency_on_other_measure
+            - deliberate_deprioritisation
+            - external_event
+        revising:
+          type: string
+          enum: [date_only, target_value, scope, date_and_target]
+        newDueDate:
+          type: string
+          format: date
+        revisedTargetValue:
+          type: number
+          format: double
+        narrative:
+          type: string
+        declaredBy:
+          type: string
+        declaredAt:
+          type: string
+          format: date-time
+    SlippageDeclarationCreate:
+      type: object
+      required: [cause, revising, declaredBy]
+      properties:
+        cause:
+          type: string
+          enum:
+            - appropriation_timing
+            - agreement_with_third_party_not_reached
+            - capacity_shortfall
+            - dependency_on_other_measure
+            - deliberate_deprioritisation
+            - external_event
+        revising:
+          type: string
+          enum: [date_only, target_value, scope, date_and_target]
+        newDueDate:
+          type: string
+          format: date
+        revisedTargetValue:
+          type: number
+          format: double
+        narrative:
+          type: string
+        declaredBy:
+          type: string
+    SpilloverAssessment:
+      type: object
+      required: [id, measureId, filedByMinistryId, affectedMinistryIds, effectDirection, filedAt, responseDueAt]
+      properties:
+        id:
+          type: string
+        measureId:
+          type: string
+        filedByMinistryId:
+          type: string
+        affectedMinistryIds:
+          type: array
+          items:
+            type: string
+        affectedPolicyAreas:
+          type: array
+          items:
+            type: string
+        effectDirection:
+          type: string
+          enum: [beneficial, adverse, mixed, none_expected]
+        earlyWarningFlag:
+          type: boolean
+          description: Set where an undesirable development should be prevented early
+        sustainabilityGoalReferences:
+          type: array
+          items:
+            type: string
+        filedAt:
+          type: string
+          format: date-time
+        responseDueAt:
+          type: string
+          format: date-time
+        outstandingResponseCount:
+          type: integer
+    SpilloverAssessmentCreate:
+      type: object
+      required: [measureId, filedByMinistryId, affectedMinistryIds, effectDirection]
+      properties:
+        measureId:
+          type: string
+        filedByMinistryId:
+          type: string
+        affectedMinistryIds:
+          type: array
+          items:
+            type: string
+        affectedPolicyAreas:
+          type: array
+          items:
+            type: string
+        effectDirection:
+          type: string
+          enum: [beneficial, adverse, mixed, none_expected]
+        earlyWarningFlag:
+          type: boolean
+        sustainabilityGoalReferences:
+          type: array
+          items:
+            type: string
+    CoordinationResponse:
+      type: object
+      required: [id, assessmentId, respondingMinistryId, position, respondedAt]
+      properties:
+        id:
+          type: string
+        assessmentId:
+          type: string
+        respondingMinistryId:
+          type: string
+        position:
+          type: string
+          enum: [acknowledged, accepted, disputed, no_interest]
+        disputeGrounds:
+          type: string
+        actionUndertaken:
+          type: string
+        daysToRespond:
+          type: integer
+        respondedAt:
+          type: string
+          format: date-time
+    CoordinationResponseCreate:
+      type: object
+      required: [respondingMinistryId, position]
+      properties:
+        respondingMinistryId:
+          type: string
+        position:
+          type: string
+          enum: [acknowledged, accepted, disputed, no_interest]
+        disputeGrounds:
+          type: string
+        actionUndertaken:
+          type: string
+    PortfolioReorganisation:
+      type: object
+      required: [id, effectiveFrom, changeType, transitionWindowDays]
+      properties:
+        id:
+          type: string
+        effectiveFrom:
+          type: string
+          format: date
+        changeType:
+          type: string
+          enum: [ministry_renamed, portfolio_split, portfolio_merged, unit_transferred, new_ministry_created]
+        predecessorMinistryIds:
+          type: array
+          items:
+            type: string
+        successorMinistryIds:
+          type: array
+          items:
+            type: string
+        affectedMeasureIds:
+          type: array
+          items:
+            type: string
+        transitionWindowDays:
+          type: integer
+        measuresReowned:
+          type: integer
+        measuresOrphaned:
+          type: integer
+    PortfolioReorganisationCreate:
+      type: object
+      required: [effectiveFrom, changeType, transitionWindowDays]
+      properties:
+        effectiveFrom:
+          type: string
+          format: date
+        changeType:
+          type: string
+          enum: [ministry_renamed, portfolio_split, portfolio_merged, unit_transferred, new_ministry_created]
+        predecessorMinistryIds:
+          type: array
+          items:
+            type: string
+        successorMinistryIds:
+          type: array
+          items:
+            type: string
+        transitionWindowDays:
+          type: integer
+    ScrutinyRequestType:
+      type: string
+      enum:
+        - study_commission_question
+        - written_parliamentary_question
+        - committee_request
+        - audit_office_enquiry
+        - transparency_request
+        - eu_reporting_obligation
+    ScrutinyRequest:
+      type: object
+      required: [id, requestType, receivedAt, answerDueAt, status]
+      properties:
+        id:
+          type: string
+        requestType:
+          $ref: "#/components/schemas/ScrutinyRequestType"
+        requestingBody:
+          type: string
+        subject:
+          type: string
+        measureIds:
+          type: array
+          items:
+            type: string
+        receivedAt:
+          type: string
+          format: date-time
+        answerDueAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [received, drafting, answered, partially_answered, refused]
+    ScrutinyRequestCreate:
+      type: object
+      required: [requestType, requestingBody, subject, answerDueAt]
+      properties:
+        requestType:
+          $ref: "#/components/schemas/ScrutinyRequestType"
+        requestingBody:
+          type: string
+        subject:
+          type: string
+        measureIds:
+          type: array
+          items:
+            type: string
+        answerDueAt:
+          type: string
+          format: date-time
+    AnswerRecord:
+      type: object
+      required: [id, scrutinyRequestId, answerText, evidencedFromLedger, answeredAt]
+      properties:
+        id:
+          type: string
+        scrutinyRequestId:
+          type: string
+        answerText:
+          type: string
+        citedRecordIds:
+          type: array
+          items:
+            type: string
+        leverageStatementId:
+          type: string
+        evidencedFromLedger:
+          type: boolean
+        unevidencedElements:
+          type: array
+          items:
+            type: string
+        clearedBy:
+          type: string
+        daysToAnswer:
+          type: integer
+        answeredAt:
+          type: string
+          format: date-time
+    AnswerRecordCreate:
+      type: object
+      required: [answerText, evidencedFromLedger, clearedBy]
+      properties:
+        answerText:
+          type: string
+        citedRecordIds:
+          type: array
+          items:
+            type: string
+        leverageStatementId:
+          type: string
+        evidencedFromLedger:
+          type: boolean
+        unevidencedElements:
+          type: array
+          items:
+            type: string
+        clearedBy:
+          type: string
+    PublicationRelease:
+      type: object
+      required: [id, strategyEditionId, period, issuedAt]
+      properties:
+        id:
+          type: string
+        strategyEditionId:
+          type: string
+        period:
+          type: string
+        includedMeasureCount:
+          type: integer
+        withheldMeasureCount:
+          type: integer
+        withholdingReasonBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              reason:
+                type: string
+              count:
+                type: integer
+        leverageStatementId:
+          type: string
+        issuedBy:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+    PublicationReleaseCreate:
+      type: object
+      required: [strategyEditionId, period, issuedBy]
+      properties:
+        strategyEditionId:
+          type: string
+        period:
+          type: string
+        leverageStatementId:
+          type: string
+        issuedBy:
+          type: string
+    CoordinationReport:
+      type: object
+      properties:
+        strategyEditionId:
+          type: string
+        period:
+          type: string
+        measuresRegistered:
+          type: integer
+        measuresWithCurrentLead:
+          type: integer
+        measuresUnowned:
+          type: integer
+        oldestOrphanDays:
+          type: integer
+        commitmentStrengthBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              commitmentStrength:
+                $ref: "#/components/schemas/CommitmentStrength"
+              count:
+                type: integer
+        instrumentBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              deliveryInstrument:
+                $ref: "#/components/schemas/DeliveryInstrument"
+              count:
+                type: integer
+        measuresDependentOnThirdParties:
+          type: integer
+        moneyAttribution:
+          $ref: "#/components/schemas/MoneyAttributionSummary"
+        confirmedLeverageRatio:
+          type: number
+          format: float
+        unconfirmedPledgeTotal:
+          $ref: "#/components/schemas/Money"
+        targetsWithDefinitionInForce:
+          type: integer
+        definitionAmendmentsThisPeriod:
+          type: integer
+        milestonesMet:
+          type: integer
+        milestonesSlipped:
+          type: integer
+        slippageCauseBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              cause:
+                type: string
+              count:
+                type: integer
+        spilloverAssessmentsFiled:
+          type: integer
+        spilloverAssessmentsUnanswered:
+          type: integer
+        medianDaysToCoordinationResponse:
+          type: number
+          format: float
+        measuresBasisLapsed:
+          type: integer
+        moneyAttributedToLapsedMeasures:
+          $ref: "#/components/schemas/Money"
+        scrutinyRequestsAnswered:
+          type: integer
+        medianDaysToAnswer:
+          type: number
+          format: float
+        answersNotEvidencedFromLedger:
+          type: integer
+        issuedAt:
+          type: string
+          format: date-time
+    DataEnvelopeStrategyEdition:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/StrategyEdition"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeFieldOfAction:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/FieldOfAction"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeMeasure:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Measure"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeLeadAssignment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/LeadAssignment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeFundingLine:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/FundingLine"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAppropriationYear:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AppropriationYear"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeMoneyAttributionSummary:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/MoneyAttributionSummary"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCoFinancingPledge:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CoFinancingPledge"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopePledgeRealisation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/PledgeRealisation"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeLeverageStatement:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/LeverageStatement"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeTargetCounter:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/TargetCounter"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCountingDefinition:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CountingDefinition"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeProgressObservation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ProgressObservation"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeDeliveryMilestone:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/DeliveryMilestone"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeSlippageDeclaration:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/SlippageDeclaration"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeSpilloverAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/SpilloverAssessment"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCoordinationResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CoordinationResponse"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopePortfolioReorganisation:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/PortfolioReorganisation"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeScrutinyRequest:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/ScrutinyRequest"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeAnswerRecord:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/AnswerRecord"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopePublicationRelease:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/PublicationRelease"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    DataEnvelopeCoordinationReport:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/CoordinationReport"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeStrategyEdition:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/StrategyEdition"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeFieldOfAction:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FieldOfAction"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeMeasure:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Measure"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeFundingLine:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/FundingLine"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeLeverageStatement:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/LeverageStatement"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeTargetCounter:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/TargetCounter"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeSpilloverAssessment:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/SpilloverAssessment"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ListEnvelopeScrutinyRequest:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ScrutinyRequest"
+            nextCursor:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
